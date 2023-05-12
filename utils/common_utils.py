@@ -6,11 +6,10 @@ import cv2
 import numpy as np
 from PIL import Image
 import PIL
-import numpy as np
-
 
 import matplotlib.pyplot as plt
 import random
+
 
 def crop_image(img, d=32):
     '''Make dimensions divisible by `d`'''
@@ -20,14 +19,15 @@ def crop_image(img, d=32):
                 imgsize[1] - imgsize[1] % d)
 
     bbox = [
-            int((imgsize[0] - new_size[0])/2),
-            int((imgsize[1] - new_size[1])/2),
-            int((imgsize[0] + new_size[0])/2),
-            int((imgsize[1] + new_size[1])/2),
+        int((imgsize[0] - new_size[0]) / 2),
+        int((imgsize[1] - new_size[1]) / 2),
+        int((imgsize[0] + new_size[0]) / 2),
+        int((imgsize[1] + new_size[1]) / 2),
     ]
 
-    img_cropped = img[0:new_size[0],0:new_size[1],:]
+    img_cropped = img[0:new_size[0], 0:new_size[1], :]
     return img_cropped
+
 
 def get_params(opt_over, net, net_input, downsampler=None):
     '''Returns parameters that we want to optimize over.
@@ -39,12 +39,12 @@ def get_params(opt_over, net, net_input, downsampler=None):
     '''
     opt_over_list = opt_over.split(',')
     params = []
-    
+
     for opt in opt_over_list:
-    
+
         if opt == 'net':
             params += [x for x in net.parameters()]
-        elif  opt=='down':
+        elif opt == 'down':
             assert downsampler is not None
             params += [x for x in downsampler.parameters()]
         elif opt == 'input':
@@ -52,17 +52,19 @@ def get_params(opt_over, net, net_input, downsampler=None):
             params += [net_input]
         else:
             assert False, 'what is it?'
-            
+
     return params
+
 
 def get_image_grid(images_np, nrow=8):
     '''Creates a grid from a list of images by concatenating them.'''
     images_torch = [torch.from_numpy(x) for x in images_np]
     torch_grid = torchvision.utils.make_grid(images_torch, nrow)
-    
+
     return torch_grid.numpy()
 
-def plot_image_grid(images_np, nrow =8, factor=1, interpolation='lanczos'):
+
+def plot_image_grid(images_np, nrow=8, factor=1, interpolation='lanczos'):
     """Draws images in a grid
     
     Args:
@@ -73,29 +75,29 @@ def plot_image_grid(images_np, nrow =8, factor=1, interpolation='lanczos'):
     """
     n_channels = max(x.shape[0] for x in images_np)
     assert (n_channels == 3) or (n_channels == 1), "images should have 1 or 3 channels"
-    
+
     images_np = [x if (x.shape[0] == n_channels) else np.concatenate([x, x, x], axis=0) for x in images_np]
 
     grid = get_image_grid(images_np, nrow)
-    
+
     plt.figure(figsize=(len(images_np) + factor, 12 + factor))
-    
+
     if images_np[0].shape[0] == 1:
         plt.imshow(grid[0], cmap='gray', interpolation=interpolation)
     else:
         plt.imshow(grid.transpose(1, 2, 0), interpolation=interpolation)
-    
+
     plt.show()
-    
+
     return grid
+
 
 def load(path):
     """Load PIL image."""
     img = Image.open(path)
 
-
-
     return img
+
 
 def get_image(path, imsize=-1):
     """Load an image and resize to a cpecific size. 
@@ -109,7 +111,7 @@ def get_image(path, imsize=-1):
     if isinstance(imsize, int):
         imsize = (imsize, imsize)
 
-    if imsize[0]!= -1 and img.size != imsize:
+    if imsize[0] != -1 and img.size != imsize:
         if imsize[0] > img.size[0]:
             img = img.resize(imsize, Image.BICUBIC)
         else:
@@ -120,18 +122,18 @@ def get_image(path, imsize=-1):
     return img, img_np
 
 
-
 def fill_noise(x, noise_type):
     """Fills tensor `x` with noise of type `noise_type`."""
     torch.manual_seed(0)
     if noise_type == 'u':
         x.uniform_()
     elif noise_type == 'n':
-        x.normal_() 
+        x.normal_()
     else:
         assert False
 
-def get_noise(input_depth, method, spatial_size, noise_type='u', var=1./10):
+
+def get_noise(input_depth, method, spatial_size, noise_type='u', var=1. / 10):
     """Returns a pytorch.Tensor of size (1 x `input_depth` x `spatial_size[0]` x `spatial_size[1]`) 
     initialized in a specific way.
     Args:
@@ -146,18 +148,20 @@ def get_noise(input_depth, method, spatial_size, noise_type='u', var=1./10):
     if method == 'noise':
         shape = [1, input_depth, spatial_size[0], spatial_size[1]]
         net_input = torch.zeros(shape)
-        
+
         fill_noise(net_input, noise_type)
-        net_input *= var            
-    elif method == 'meshgrid': 
+        net_input *= var
+    elif method == 'meshgrid':
         assert input_depth == 2
-        X, Y = np.meshgrid(np.arange(0, spatial_size[1])/float(spatial_size[1]-1), np.arange(0, spatial_size[0])/float(spatial_size[0]-1))
+        X, Y = np.meshgrid(np.arange(0, spatial_size[1]) / float(spatial_size[1] - 1),
+                           np.arange(0, spatial_size[0]) / float(spatial_size[0] - 1))
         meshgrid = np.concatenate([X[None, :], Y[None, :]])
         net_input = np_to_torch(meshgrid)
     else:
         assert False
-        
+
     return net_input
+
 
 def pil_to_np(img_PIL):
     '''Converts image in PIL format to np.array.
@@ -167,19 +171,20 @@ def pil_to_np(img_PIL):
     ar = np.array(img_PIL)
 
     if len(ar.shape) == 3:
-        ar = ar.transpose(2,0,1)
+        ar = ar.transpose(2, 0, 1)
     else:
         ar = ar[None, ...]
 
     return ar.astype(np.float32) / 255.
 
-def np_to_pil(img_np): 
+
+def np_to_pil(img_np):
     '''Converts image in np.array format to PIL image.
     
     From C x W x H [0..1] to  W x H x C [0...255]
     '''
-    ar = np.clip(img_np*255,0,255).astype(np.uint8)
-    
+    ar = np.clip(img_np * 255, 0, 255).astype(np.uint8)
+
     if img_np.shape[0] == 1:
         ar = ar[0]
     else:
@@ -187,12 +192,14 @@ def np_to_pil(img_np):
 
     return Image.fromarray(ar)
 
+
 def np_to_torch(img_np):
     '''Converts image in numpy.array to torch.Tensor.
 
     From C x W x H [0..1] to  C x W x H [0..1]
     '''
     return torch.from_numpy(img_np)[None, :]
+
 
 def torch_to_np(img_var):
     '''Converts an image in torch.Tensor format to np.array.
@@ -220,10 +227,12 @@ def optimize(optimizer_type, parameters, closure, LR, num_iter):
             closure()
             optimizer.step()
 
-        print('Starting optimization with LBFGS')        
+        print('Starting optimization with LBFGS')
+
         def closure2():
             optimizer.zero_grad()
             return closure()
+
         optimizer = torch.optim.LBFGS(parameters, max_iter=num_iter, lr=LR, tolerance_grad=-1, tolerance_change=-1)
         optimizer.step(closure2)
 
@@ -290,5 +299,3 @@ def readimg(path_to_image):
     y, cr, cb = cv2.split(x)
 
     return img, y, cb, cr
-
-
